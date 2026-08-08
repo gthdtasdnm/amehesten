@@ -2,19 +2,15 @@
 // Keine Abhaengigkeiten, kein Build-Schritt. `deno task dev` oder direkt:
 //   deno run --allow-net --allow-read --allow-env --allow-sys server.js
 //
-// Raum, Host, Bereit, Karenzzeit und Bremse sind Zeile fuer Zeile wie in „Ich
-// hab noch nie". Eigen ist nur alles ab „Spielablauf": hier waehlt niemand ja
-// oder nein, sondern eine *Person* – und das aendert die halbe Rundenlogik.
+// Raum, Host, Bereit, Karenzzeit und Bremse stehen nicht mehr hier, sondern in
+// raum.js und statisch.js – beides Kopien aus /var/www/html/gemeinsam/, die
+// `node werkzeug/verteilen.mjs` hierher schreibt. Was hier steht, ist nur noch
+// dieses Spiel: hier waehlt niemand ja oder nein, sondern eine *Person*.
 
 import { MODI, stapelFuer } from "./fragen.js";
-import {
-  absender,
-  darfRaumOeffnen,
-  darfVerbinden,
-  raumVermerkt,
-  verbindungAuf,
-  verbindungZu,
-} from "./bremse.js";
+import { darfRaumOeffnen, raumVermerkt } from "./bremse.js";
+import { cleanName, raumverwaltung, shuffle } from "./raum.js";
+import { starte } from "./statisch.js";
 
 const PORT = Number(Deno.env.get("PORT") ?? 8074);
 const HOST = Deno.env.get("HOST") ?? "0.0.0.0";
@@ -33,179 +29,59 @@ const MAX_PLAYERS = 10;
 // waehlen, und beides sagt nichts.
 const MIN_PLAYERS = 3;
 
-const ROOM_IDLE_MS = 5 * 60_000;
-const SEAT_GRACE_MS = 60_000;
-
 const RUNDEN_OPTIONEN = [8, 12, 20, 0]; // 0 = ohne festes Ende
 
 // ---------------------------------------------------------------------------
 // Raeume
+//
+// Die Haken sind die ganze Anpassung: ein eigener Kartenstapel je Raum, eine
+// Krone je Spieler, der Modus in der oeffentlichen Raumliste – und was
+// passieren soll, wenn mitten in der Abstimmung jemand verschwindet.
 // ---------------------------------------------------------------------------
 
-const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const rooms = new Map();
+const {
+  rooms, browsing,
+  createRoom, clearTimers, anwesende,
+  send, raw, broadcast,
+  roomList, pushState, pushRoomList,
+  makePlayer, attach, dropPlayer,
+} = raumverwaltung({
+  maxPlayers: MAX_PLAYERS,
+  minPlayers: MIN_PLAYERS,
+  einstellungen: { rounds: 12, modus: "gemischt", selbst: true },
+  raumfelder: () => ({ deck: [] }),
+  spielerfelder: () => ({ kronen: 0 }),
+  listeneintrag: (room) => ({ modus: room.settings.modus }),
 
-const browsing = new Set();
+  beimBeitritt: (room) => {
+    if (room.phase === "playing" && room.aktuell) pushRunde(room);
+  },
 
-function newCode() {
-  for (let i = 0; i < 500; i++) {
-    let c = "";
-    for (let k = 0; k < 4; k++) {
-      c += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+  // Seine Stimme zaehlt nicht mehr mit, sonst wartet die Runde ewig auf ihn.
+  beimVerlassen: (room, player) => {
+    room.aktuell?.stimmen.delete(player.id);
+  },
+  nachVerlassen: (room) => {
+    pruefeStimmen(room);
+    if (room.aktuell) pushRunde(room);
+  },
+
+  beimPlatzfrei: (room, id) => {
+    const cur = room.aktuell;
+    if (cur && cur.schritt === "abstimmen") {
+      // Stimmen *fuer* die Person ebenso einsammeln wie ihre eigene – beides
+      // zeigt sonst auf jemanden, den es nicht mehr gibt.
+      cur.stimmen.delete(id);
+      for (const [waehlerId, zielId] of [...cur.stimmen]) {
+        if (zielId === id) cur.stimmen.delete(waehlerId);
+      }
+      pruefeStimmen(room);
     }
-    if (!rooms.has(c)) return c;
-  }
-  return "R" + Date.now().toString(36).slice(-3).toUpperCase();
-}
+    if (room.aktuell) pushRunde(room);
+  },
 
-const token = () => crypto.randomUUID();
-
-function cleanName(raw) {
-  // Steuerzeichen raus, sonst zerlegt ein Zeilenumbruch im Namen das Layout.
-  const s = String(raw ?? "").replace(/[\u0000-\u001f\u007f]/g, "").trim();
-  return s.slice(0, 12) || "Spieler";
-}
-
-function shuffle(list) {
-  for (let i = list.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [list[i], list[j]] = [list[j], list[i]];
-  }
-  return list;
-}
-
-function createRoom(isPublic) {
-  const room = {
-    code: newCode(),
-    isPublic: !!isPublic,
-    phase: "lobby",
-    hostId: null,
-    players: new Map(),
-    settings: { rounds: 12, modus: "gemischt", selbst: true },
-    deck: [],
-    rundeNr: 0,
-    aktuell: null,
-    timers: new Set(),
-    idleTimer: null,
-    lastActivity: Date.now(),
-  };
-  rooms.set(room.code, room);
-  return room;
-}
-
-function scheduleIdleClose(room) {
-  if (room.idleTimer) clearTimeout(room.idleTimer);
-  room.idleTimer = setTimeout(() => {
-    if (room.players.size === 0) destroyRoom(room);
-  }, ROOM_IDLE_MS);
-}
-
-function cancelIdleClose(room) {
-  if (room.idleTimer) { clearTimeout(room.idleTimer); room.idleTimer = null; }
-}
-
-function clearTimers(room) {
-  for (const id of room.timers) clearTimeout(id);
-  room.timers.clear();
-}
-
-function destroyRoom(room) {
-  clearTimers(room);
-  cancelIdleClose(room);
-  for (const p of room.players.values()) {
-    if (p.dropTimer) clearTimeout(p.dropTimer);
-  }
-  rooms.delete(room.code);
-  pushRoomList();
-}
-
-function ensureHost(room) {
-  const current = room.players.get(room.hostId);
-  if (current?.connected) return;
-  const all = [...room.players.values()];
-  const next = all.find((p) => p.connected) ?? all[0];
-  room.hostId = next ? next.id : null;
-}
-
-const anwesende = (room) => [...room.players.values()].filter((p) => p.connected);
-
-// ---------------------------------------------------------------------------
-// Senden
-// ---------------------------------------------------------------------------
-
-function send(player, msg) {
-  const ws = player.ws;
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    try {
-      ws.send(JSON.stringify(msg));
-    } catch { /* Verbindung stirbt gleich sowieso */ }
-  }
-}
-
-function raw(ws, msg) {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    try {
-      ws.send(JSON.stringify(msg));
-    } catch { /* egal */ }
-  }
-}
-
-function broadcast(room, msg) {
-  for (const p of room.players.values()) send(p, msg);
-}
-
-function publicPlayers(room) {
-  return [...room.players.values()].map((p) => ({
-    id: p.id,
-    name: p.name,
-    punkte: p.punkte,
-    ready: p.ready,
-    connected: p.connected,
-    host: p.id === room.hostId,
-  }));
-}
-
-function roomState(room) {
-  return {
-    t: "room",
-    code: room.code,
-    isPublic: room.isPublic,
-    phase: room.phase,
-    hostId: room.hostId,
-    settings: room.settings,
-    players: publicPlayers(room),
-    rundeNr: room.rundeNr,
-    maxPlayers: MAX_PLAYERS,
-    minPlayers: MIN_PLAYERS,
-  };
-}
-
-function pushState(room) {
-  broadcast(room, roomState(room));
-  if (room.isPublic) pushRoomList();
-}
-
-function roomList() {
-  return [...rooms.values()]
-    .map((r) => ({ room: r, count: anwesende(r).length }))
-    .filter(({ room, count }) =>
-      room.isPublic && room.phase === "lobby" &&
-      count > 0 && room.players.size < MAX_PLAYERS
-    )
-    .map(({ room, count }) => ({
-      code: room.code,
-      host: room.players.get(room.hostId)?.name ?? "?",
-      count,
-      max: MAX_PLAYERS,
-      modus: room.settings.modus,
-    }))
-    .sort((a, b) => b.count - a.count);
-}
-
-function pushRoomList() {
-  const msg = { t: "rooms", rooms: roomList() };
-  for (const ws of browsing) raw(ws, msg);
-}
+  zurueckZurLobby: (room) => backToLobby(room),
+});
 
 // ---------------------------------------------------------------------------
 // Fragenstapel
@@ -385,39 +261,6 @@ function backToLobby(room) {
 // Nachrichten
 // ---------------------------------------------------------------------------
 
-function attach(ws, room, player) {
-  browsing.delete(ws);
-  cancelIdleClose(room);
-  if (player.dropTimer) { clearTimeout(player.dropTimer); player.dropTimer = null; }
-  ws._room = room;
-  ws._player = player;
-  player.ws = ws;
-  player.connected = true;
-  ensureHost(room);
-  send(player, {
-    t: "joined",
-    you: player.id,
-    token: player.token,
-    code: room.code,
-  });
-  send(player, roomState(room));
-  if (room.phase === "playing" && room.aktuell) pushRunde(room);
-}
-
-function makePlayer(name, ready) {
-  return {
-    id: token(),
-    token: token(),
-    name: cleanName(name),
-    ws: null,
-    dropTimer: null,
-    punkte: 0,
-    kronen: 0,
-    ready,
-    connected: true,
-  };
-}
-
 function handle(ws, msg) {
   const room = ws._room;
   const player = ws._player;
@@ -572,154 +415,11 @@ function handle(ws, msg) {
   }
 }
 
-function dropPlayer(ws, { immediate = false } = {}) {
-  const room = ws._room;
-  const player = ws._player;
-  browsing.delete(ws);
-  if (!room || !player) return;
-  ws._room = null;
-  ws._player = null;
-
-  player.connected = false;
-  player.ws = null;
-  player.ready = false;
-
-  if (immediate || room.phase === "lobby") {
-    releaseSeat(room, player.id);
-    return;
-  }
-
-  if (player.dropTimer) clearTimeout(player.dropTimer);
-  player.dropTimer = setTimeout(() => releaseSeat(room, player.id), SEAT_GRACE_MS);
-
-  ensureHost(room);
-  // Seine Stimme zaehlt nicht mehr mit, sonst wartet die Runde ewig auf ihn.
-  room.aktuell?.stimmen.delete(player.id);
-  pushState(room);
-  pruefeStimmen(room);
-  if (room.aktuell) pushRunde(room);
-  pushRoomList();
-}
-
-function releaseSeat(room, id) {
-  const player = room.players.get(id);
-  if (!player) return;
-  if (player.dropTimer) { clearTimeout(player.dropTimer); player.dropTimer = null; }
-  room.players.delete(id);
-  ensureHost(room);
-
-  if (room.players.size === 0) {
-    backToLobby(room);
-    scheduleIdleClose(room);
-    pushRoomList();
-    return;
-  }
-
-  const cur = room.aktuell;
-  if (cur && cur.schritt === "abstimmen") {
-    // Stimmen *fuer* die Person ebenso einsammeln wie ihre eigene – beides
-    // zeigt sonst auf jemanden, den es nicht mehr gibt.
-    cur.stimmen.delete(id);
-    for (const [waehlerId, zielId] of [...cur.stimmen]) {
-      if (zielId === id) cur.stimmen.delete(waehlerId);
-    }
-    pruefeStimmen(room);
-  }
-  if (room.aktuell) pushRunde(room);
-
-  pushState(room);
-  pushRoomList();
-}
-
-// ---------------------------------------------------------------------------
-// HTTP + WebSocket
-// ---------------------------------------------------------------------------
-
-const MIME = {
-  ".html": "text/html; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".ico": "image/x-icon",
-  ".webmanifest": "application/manifest+json",
-};
-
-async function serveStatic(pathname) {
-  let rel = decodeURIComponent(pathname).replace(/^\/+/, "");
-  if (rel === "" || rel.endsWith("/")) rel += "index.html";
-  if (rel.split("/").some((seg) => seg === "..")) {
-    return new Response("Nope", { status: 400 });
-  }
-  const url = new URL(rel, PUBLIC);
-  if (!url.href.startsWith(PUBLIC.href)) {
-    return new Response("Nope", { status: 400 });
-  }
-  try {
-    const body = await Deno.readFile(url);
-    const ext = rel.slice(rel.lastIndexOf("."));
-    return new Response(body, {
-      headers: {
-        "content-type": MIME[ext] ?? "application/octet-stream",
-        "cache-control": "no-cache",
-      },
-    });
-  } catch {
-    return new Response("Nicht gefunden", { status: 404 });
-  }
-}
-
-Deno.serve({ port: PORT, hostname: HOST }, (req, info) => {
-  const url = new URL(req.url);
-
-  if (url.pathname === "/ws" || url.pathname.endsWith("/ws")) {
-    if (req.headers.get("upgrade")?.toLowerCase() !== "websocket") {
-      return new Response("WebSocket erwartet", { status: 400 });
-    }
-    const ip = absender(req, info);
-    if (!darfVerbinden(ip)) {
-      return new Response("Zu viele Verbindungen", { status: 429 });
-    }
-    const { socket, response } = Deno.upgradeWebSocket(req);
-    socket._ip = ip;
-    let gezaehlt = false;
-    const abmelden = () => {
-      if (!gezaehlt) return;
-      gezaehlt = false;
-      verbindungZu(ip);
-    };
-    socket.onopen = () => { gezaehlt = true; verbindungAuf(ip); };
-    socket.onmessage = (ev) => {
-      let msg;
-      try {
-        msg = JSON.parse(ev.data);
-      } catch {
-        return;
-      }
-      if (msg && typeof msg.t === "string") {
-        try {
-          handle(socket, msg);
-        } catch (err) {
-          console.error("Fehler beim Verarbeiten:", err);
-        }
-      }
-    };
-    socket.onclose = () => { abmelden(); dropPlayer(socket); };
-    socket.onerror = () => { abmelden(); dropPlayer(socket); };
-    return response;
-  }
-
-  return serveStatic(url.pathname);
+starte({
+  port: PORT,
+  host: HOST,
+  publicDir: PUBLIC,
+  titel: "WER AM EHESTEN",
+  handle,
+  dropPlayer,
 });
-
-setInterval(() => {
-  const now = Date.now();
-  for (const room of rooms.values()) {
-    if (!anwesende(room).length && now - room.lastActivity > 10 * 60_000) {
-      destroyRoom(room);
-    }
-  }
-}, 60_000);
-
-console.log(`WER AM EHESTEN läuft auf http://${HOST}:${PORT}/`);
