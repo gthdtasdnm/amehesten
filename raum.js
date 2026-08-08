@@ -51,7 +51,8 @@ export function shuffle(list) {
  * @param {(room) => object} [o.zustandZusatz] zusaetzliche Felder in roomState
  * @param {(room) => object} [o.listeneintrag] zusaetzliche Felder in der Liste
  * @param {(room, player) => void} [o.beimBeitritt]  nach dem Verbinden
- * @param {(room, player) => void} [o.beimVerlassen] Abbruch, Platz bleibt noch
+ * @param {(room, player) => void} [o.beimVerlassen] Abbruch, vor pushState
+ * @param {(room, player) => void} [o.nachVerlassen] Abbruch, nach pushState
  * @param {(room, id) => void} [o.beimPlatzfrei]     Platz ist endgueltig weg
  * @param {(room) => void} [o.zurueckZurLobby]       letzte Person ist raus
  */
@@ -67,6 +68,7 @@ export function raumverwaltung({
   listeneintrag = () => ({}),
   beimBeitritt = () => {},
   beimVerlassen = () => {},
+  nachVerlassen = () => {},
   beimPlatzfrei = () => {},
   zurueckZurLobby = () => {},
 }) {
@@ -284,8 +286,13 @@ export function raumverwaltung({
     player.dropTimer = setTimeout(() => releaseSeat(room, player.id), seatGraceMs);
 
     ensureHost(room);
+    // Zwei Haken, und die Reihenfolge ist Absicht: erst den Zustand richtig
+    // stellen (die Stimme der Person zaehlt nicht mehr mit), dann den neuen
+    // Raumzustand schicken, dann die Runde nachziehen - denn die kann sich
+    // durch den Abgang bereits aufloesen und schickt dann selbst.
     beimVerlassen(room, player);
     pushState(room);
+    nachVerlassen(room, player);
     pushRoomList();
   }
 
