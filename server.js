@@ -32,6 +32,42 @@ const MIN_PLAYERS = 3;
 const RUNDEN_OPTIONEN = [8, 12, 20, 0]; // 0 = ohne festes Ende
 
 // ---------------------------------------------------------------------------
+// Wie lange jemand weg sein darf
+//
+// Dieses Spiel ist das ruhigste im Haus: eine Frage, ein Tipp, danach wird
+// geredet. Zwischen zwei Knopfdruecken liegen Minuten, in denen niemand etwas
+// tut – und genau dann legen Leute das Handy weg, sperren den Bildschirm oder
+// wechseln kurz in eine andere App. Auf dem Handy ist das jedes Mal eine
+// gekappte Verbindung.
+//
+// Mit den Vorgaben aus raum.js (Warteraum: Platz sofort weg, Partie: eine
+// Minute) hiess das: wer aus der Hosentasche zurueckkam, war ein neuer
+// Spieler. Der alte Platz stand noch da, das Hostzeichen war weitergewandert,
+// und wenn die Runde inzwischen lief, kam gar nichts mehr – „Die Runde laeuft
+// schon". Das war der gemeldete Fehler, in der Lobby wie im Spiel.
+//
+// Die Zahlen sind deshalb dieselben wie in Imposter, wo genau das schon einmal
+// gelöst wurde:
+//
+//   Warteraum   5 min – reicht fuer einen Anruf, blockiert aber keinen Platz
+//                       ueber einen ganzen Abend
+//   Partie     20 min – eine Zigarette, ein leerer Akku, ein Funkloch
+//   Hostzeichen 45 s  – muss wandern, sonst kann niemand mehr starten, aber
+//                       nicht bei jedem gesperrten Bildschirm
+//   leerer Raum 30 min
+//
+// Endgueltig geht nur, wer selbst auf „Verlassen" tippt.
+const ROOM_IDLE_MS = 30 * 60_000;
+const SEAT_GRACE_MS = 20 * 60_000;
+const LOBBY_GRACE_MS = 5 * 60_000;
+// Ueber `HOST_MS` verkuerzbar – nicht fuer den Betrieb, sondern damit man den
+// Wechsel von Hand nachstellen kann, ohne 45 Sekunden dazusitzen.
+const HOST_GRACE_MS = (() => {
+  const n = Number(Deno.env.get("HOST_MS"));
+  return Number.isFinite(n) && n >= 200 ? n : 45_000;
+})();
+
+// ---------------------------------------------------------------------------
 // Raeume
 //
 // Die Haken sind die ganze Anpassung: ein eigener Kartenstapel je Raum, eine
@@ -44,10 +80,14 @@ const {
   createRoom, clearTimers, anwesende,
   send, raw, broadcast,
   roomList, pushState, pushRoomList,
-  makePlayer, attach, dropPlayer,
+  makePlayer, attach, dropPlayer, releaseSeat,
 } = raumverwaltung({
   maxPlayers: MAX_PLAYERS,
   minPlayers: MIN_PLAYERS,
+  roomIdleMs: ROOM_IDLE_MS,
+  seatGraceMs: SEAT_GRACE_MS,
+  lobbyGraceMs: LOBBY_GRACE_MS,
+  hostGraceMs: HOST_GRACE_MS,
   einstellungen: { rounds: 12, modus: "gemischt", selbst: true },
   raumfelder: () => ({ deck: [] }),
   spielerfelder: () => ({ kronen: 0 }),
@@ -103,6 +143,15 @@ function zieheFrage(room) {
 
 function startGame(room) {
   clearTimers(room);
+  // Wer beim Start gerade nicht verbunden ist, sass bis eben unter der kurzen
+  // Warteraum-Karenz. Ab jetzt laeuft eine Partie – dann gilt fuer ihn auch die
+  // lange, sonst verliert genau der seinen Platz, der beim Warten das Handy
+  // weggelegt hat.
+  for (const p of room.players.values()) {
+    if (p.connected || !p.dropTimer) continue;
+    clearTimeout(p.dropTimer);
+    p.dropTimer = setTimeout(() => releaseSeat(room, p.id), SEAT_GRACE_MS);
+  }
   room.phase = "playing";
   room.rundeNr = 0;
   room.deck = shuffle(stapelFuer(room.settings.modus));

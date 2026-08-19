@@ -28,6 +28,7 @@
         <button class="seg" data-modus="harmlos">Harmlos</button>
         <button class="seg sel" data-modus="gemischt">Gemischt</button>
         <button class="seg" data-modus="frech">Frech</button>
+        <button class="seg seg-rot" data-modus="ab18">18+</button>
       </div>
     </div>
 
@@ -78,6 +79,7 @@
           <button class="seg" data-lobbymodus="harmlos">Harmlos</button>
           <button class="seg" data-lobbymodus="gemischt">Gemischt</button>
           <button class="seg" data-lobbymodus="frech">Frech</button>
+          <button class="seg seg-rot" data-lobbymodus="ab18">18+</button>
         </div>
       </div>
       <div class="setting">
@@ -161,6 +163,21 @@
   </div>
 </section>
 
+<!-- 18+-Abfrage. Keine echte Schranke – aber der Unterschied zwischen
+     „aus Versehen" und „bewusst" soll dokumentiert sein. -->
+<div id="ab18Gate" hidden>
+  <div class="gate-inner">
+    <h2>🔞 Fragen ab 18</h2>
+    <p id="ab18Text">Dieser Stapel enthält Fragen über Sex, Rausch und andere
+       Sachen, die man sonst nicht laut sagt. Nur weiterspielen, wenn alle am
+       Tisch volljährig sind und Lust darauf haben.</p>
+    <p class="gate-klein">Der Host kann jede Frage überspringen, und niemand
+       muss auf irgendetwas antworten. Es zeigt sowieso nur ein Finger.</p>
+    <button id="ab18Ja" class="btn primary big">Ich bin 18 oder älter</button>
+    <button id="ab18Nein" class="btn ghost">Lieber harmlos</button>
+  </div>
+</div>
+
 <div id="help" hidden>
   <div class="help-inner">
     <h2>So läuft das</h2>
@@ -179,6 +196,10 @@
           anführt, bekommt zusätzlich eine 👑.</li>
       <li><b>Am Ende</b> steht, über wen am meisten geredet wurde. Das ist
           keine Beleidigung, das ist der Preis.</li>
+      <li><b>Vier Stapel:</b> <i>Harmlos</i> geht am Familientisch, <i>Frech</i>
+          zielt auf Macken und Peinlichkeiten, <i>Gemischt</i> ist beides.
+          <i>18+</i> ist ein eigener Stapel und geht nicht überall – der Host
+          stellt es ein, im Warteraum sehen alle, was gespielt wird.</li>
     </ul>
     <button id="helpClose" class="btn">Alles klar</button>
   </div>

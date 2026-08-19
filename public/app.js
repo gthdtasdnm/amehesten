@@ -13,7 +13,11 @@ const MODUS_TEXT = {
   harmlos: "Harmlos",
   gemischt: "Gemischt",
   frech: "Frech",
+  ab18: "Schmutzig 18+",
 };
+
+/** Modi, die in den 18+-Stapel greifen. Alles andere geht ohne Abfrage. */
+const IST_AB18 = (m) => m === "ab18";
 
 const state = {
   you: null,
@@ -23,6 +27,7 @@ const state = {
   pendingIntent: null,
   visibility: "public",
   modus: "gemischt",
+  gate: null,        // offene 18+-Abfrage: { typ, modus, dann, sonst }
 };
 
 // ---------------------------------------------------------------------------
@@ -100,7 +105,24 @@ function send(msg) {
   if (sock && sock.readyState === WebSocket.OPEN) sock.send(JSON.stringify(msg));
 }
 
+let wiederUhr = null;
+let meldeUhr = null;
+// Ist auf *dieser* Verbindung schon ein Raumzustand angekommen? Daran hängt,
+// was ein „error" bedeutet: vor dem ersten `room` ist es die Antwort auf den
+// Wiedereinstieg (Raum weg, Runde läuft schon) – danach nur eine Meldung, die
+// niemanden aus dem Raum werfen darf.
+let angekommen = false;
+
 function connect() {
+  clearTimeout(wiederUhr);
+  wiederUhr = null;
+  // Doppelte Verbindungen sind der Hauptgrund, warum der Wiedereinstieg früher
+  // schiefging: `sofortWieder` unten feuert bei jeder Rückkehr, und Handys
+  // feuern gleich drei Ereignisse auf einmal.
+  if (sock && (sock.readyState === WebSocket.OPEN || sock.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+  angekommen = false;
   // Muss aus dem Basispfad kommen: das Spiel läuft in Produktion unter
   // /amehesten/, ein festes "/ws" landet auf der Domainwurzel.
   const url = new URL("ws", document.baseURI);
@@ -109,6 +131,7 @@ function connect() {
 
   sock.onopen = () => {
     retryIn = 500;
+    clearTimeout(meldeUhr);
     setStatus("");
     const s = session();
     if (state.pendingIntent) {
@@ -132,14 +155,40 @@ function connect() {
   };
 
   sock.onclose = () => {
-    setStatus("Verbindung weg – neuer Versuch …");
-    setTimeout(connect, retryIn);
+    // Nicht sofort Alarm schlagen: die allermeisten Abbrüche sind nach einer
+    // halben Sekunde geheilt, und eine Warnung, die bei jedem Wimpernschlag
+    // aufblinkt, liest irgendwann niemand mehr.
+    clearTimeout(meldeUhr);
+    meldeUhr = setTimeout(() => setStatus("Verbindung weg – neuer Versuch …"), 1500);
+    clearTimeout(wiederUhr);
+    wiederUhr = setTimeout(connect, retryIn);
     retryIn = Math.min(retryIn * 1.8, 8000);
   };
 }
 
+// Zurück aus der Hosentasche.
+//
+// Auf dem Handy ist der weggelegte Bildschirm der Normalfall – und in genau
+// diesem Spiel dauert er am längsten: zwischen zwei Knopfdrücken wird geredet,
+// nicht getippt. Safari friert den Tab ein, kappt die Verbindung und lässt
+// auch die Wartezeit oben nicht weiterlaufen. Wer dann zurückkommt, sitzt vor
+// einer toten Seite, bis der Zähler irgendwann von selbst zuschlägt – bis zu
+// acht Sekunden. Deshalb bei jedem Zeichen von Rückkehr sofort und ohne
+// Wartezeit neu verbinden; `connect` bricht von selbst ab, wenn die Verbindung
+// noch steht. Gleiche Fassung wie in Imposter.
+function sofortWieder() {
+  if (document.visibilityState === "hidden") return;
+  retryIn = 500;
+  connect();
+}
+
+document.addEventListener("visibilitychange", sofortWieder);
+globalThis.addEventListener("pageshow", sofortWieder);
+globalThis.addEventListener("focus", sofortWieder);
+globalThis.addEventListener("online", sofortWieder);
+
 // Lebenszeichen alle 25 s. Der Server schließt jede Verbindung, die 65 s lang
-// schweigt (die Geisterwache in `server.js`) – wer eine Weile nur zusieht und
+// schweigt (die Geisterwache in `raum.js`) – wer eine Weile nur zusieht und
 // nichts drückt, flog dadurch mitten im Spiel aus dem Raum. Gleicher Takt wie
 // in `gemeinsam/schale.js`; dieser Client hat die Schale nicht und schickt den
 // Ping selbst.
@@ -177,6 +226,61 @@ function escapeHtml(s) {
 }
 
 // ---------------------------------------------------------------------------
+// 18+
+//
+// Keine echte Schranke – aber der Unterschied zwischen „aus Versehen" und
+// „bewusst" soll dokumentiert sein. Gleiche Bauart wie in „Ich hab noch nie",
+// nur mit eigenem Schlüssel: wer dort bestätigt hat, hat es hier nicht.
+// ---------------------------------------------------------------------------
+
+const AB18_KEY = "amehesten_ab18";
+const ab18Bestaetigt = () => {
+  try {
+    return localStorage.getItem(AB18_KEY) === "ja";
+  } catch {
+    return false;
+  }
+};
+
+function merkeAb18() {
+  try {
+    localStorage.setItem(AB18_KEY, "ja");
+  } catch { /* dann eben jedes Mal fragen */ }
+}
+
+/**
+ * Alles, was in den 18+-Stapel führt, kommt hier durch. Zwei Fälle: man stellt
+ * den Modus selbst ein („wahl") oder man ist in einem Raum gelandet, in dem er
+ * schon eingestellt war („beitritt"). Der zweite Fall ist der wichtigere – da
+ * hat man die Entscheidung nicht selbst getroffen.
+ */
+function mitAb18(typ, modus, dann, sonst) {
+  if (!IST_AB18(modus) || ab18Bestaetigt()) return dann();
+  state.gate = { typ, modus, dann, sonst };
+  $("ab18Text").textContent = typ === "beitritt"
+    ? "In diesem Raum wird mit Fragen über Sex, Rausch und andere Sachen gespielt, die man sonst nicht laut sagt. Nur weiterspielen, wenn alle am Tisch volljährig sind und Lust darauf haben."
+    : "Dieser Stapel enthält Fragen über Sex, Rausch und andere Sachen, die man sonst nicht laut sagt. Nur weiterspielen, wenn alle am Tisch volljährig sind und Lust darauf haben.";
+  $("ab18Nein").textContent = typ === "beitritt" ? "Raum verlassen" : "Lieber harmlos";
+  $("ab18Gate").hidden = false;
+}
+
+$("ab18Ja").addEventListener("click", () => {
+  const g = state.gate;
+  state.gate = null;
+  $("ab18Gate").hidden = true;
+  merkeAb18();
+  g?.dann?.();
+});
+
+$("ab18Nein").addEventListener("click", () => {
+  const g = state.gate;
+  state.gate = null;
+  $("ab18Gate").hidden = true;
+  if (g?.sonst) g.sonst();
+  else if (g?.typ === "beitritt") verlassen();
+});
+
+// ---------------------------------------------------------------------------
 // Nachrichten vom Server
 // ---------------------------------------------------------------------------
 
@@ -194,6 +298,7 @@ function onMessage(msg) {
       break;
 
     case "room":
+      angekommen = true;
       state.room = msg;
       if (msg.phase !== "playing") state.runde = null;
       renderRoom();
@@ -210,7 +315,22 @@ function onMessage(msg) {
 
     case "error":
       toast(msg.msg);
-      show("home");
+      // Kam die Meldung, bevor auf dieser Verbindung je ein Raum ankam, ist der
+      // Wiedereinstieg gescheitert: den Raum gibt es nicht mehr, oder die Runde
+      // läuft ohne uns weiter. Dann muss die gemerkte Sitzung weg – sonst
+      // versucht der Client sie bei jedem Neuverbinden wieder, und man bekommt
+      // dieselbe Meldung im Halbminutentakt.
+      //
+      // Steht dagegen schon ein Raum, sitzen wir drin: dann ist es nur eine
+      // Meldung (Raum voll, zu viele Räume) und niemand fliegt heraus.
+      if (!angekommen) {
+        saveSession(null);
+        state.room = null;
+        state.runde = null;
+        state.you = null;
+        location.hash = "";
+        show("home");
+      }
       break;
   }
 }
@@ -228,14 +348,18 @@ function renderRooms(list) {
     return;
   }
   box.innerHTML = list.map((r) => `
-    <button class="roomrow" data-code="${escapeHtml(r.code)}">
+    <button class="roomrow${IST_AB18(r.modus) ? " rot" : ""}" data-code="${escapeHtml(r.code)}"
+            data-modus="${escapeHtml(r.modus)}">
       <span class="roomrow-name">${escapeHtml(r.host)}</span>
       <span class="roomrow-meta">${escapeHtml(MODUS_TEXT[r.modus] ?? r.modus)}</span>
       <span class="roomrow-count">${r.count}/${r.max}</span>
     </button>`).join("");
 
   for (const b of box.querySelectorAll(".roomrow")) {
-    b.addEventListener("click", () => joinCode(b.dataset.code));
+    // Vor dem Beitritt fragen, nicht danach – sonst sitzt man schon drin.
+    b.addEventListener("click", () => {
+      mitAb18("beitritt", b.dataset.modus, () => joinCode(b.dataset.code), () => {});
+    });
   }
 }
 
@@ -272,15 +396,21 @@ function verlassen() {
 // Startseite
 // ---------------------------------------------------------------------------
 
+// `.seg[data-modus]` und nicht nur `[data-modus]`: die Zeilen der Raumliste
+// tragen dasselbe Attribut, damit vor dem Beitritt gefragt werden kann.
 function setModus(m) {
   state.modus = m;
-  for (const b of document.querySelectorAll("[data-modus]")) {
+  for (const b of document.querySelectorAll(".seg[data-modus]")) {
     b.classList.toggle("sel", b.dataset.modus === m);
   }
 }
 
-for (const b of document.querySelectorAll("[data-modus]")) {
-  b.addEventListener("click", () => setModus(b.dataset.modus));
+for (const b of document.querySelectorAll(".seg[data-modus]")) {
+  // Der 18+-Stapel wird schon beim Einstellen abgefragt, nicht erst beim
+  // Start – sonst hat der Host die Runde eröffnet und wundert sich danach.
+  b.addEventListener("click", () => {
+    mitAb18("wahl", b.dataset.modus, () => setModus(b.dataset.modus), () => setModus("harmlos"));
+  });
 }
 
 for (const b of document.querySelectorAll("[data-vis]")) {
@@ -336,6 +466,13 @@ function renderRoom() {
   }
 
   show("lobby");
+
+  // In einem 18+-Raum gelandet, ohne je bestätigt zu haben? Dann jetzt fragen.
+  // Greift auch bei dem, der über einen geteilten Link hereinkommt und die
+  // Liste nie gesehen hat.
+  if (IST_AB18(r.settings.modus) && !ab18Bestaetigt() && !state.gate) {
+    mitAb18("beitritt", r.settings.modus, () => {});
+  }
 
   $("roomCode").textContent = r.code;
   const da = r.players.filter((p) => p.connected).length;
@@ -414,7 +551,14 @@ for (const b of document.querySelectorAll("[data-raus]")) {
 
 
 for (const b of document.querySelectorAll("[data-lobbymodus]")) {
-  b.addEventListener("click", () => send({ t: "settings", modus: b.dataset.lobbymodus }));
+  b.addEventListener("click", () => {
+    mitAb18(
+      "wahl",
+      b.dataset.lobbymodus,
+      () => send({ t: "settings", modus: b.dataset.lobbymodus }),
+      () => send({ t: "settings", modus: "harmlos" }),
+    );
+  });
 }
 for (const b of document.querySelectorAll("[data-selbst]")) {
   b.addEventListener("click", () => send({ t: "settings", selbst: b.dataset.selbst === "ja" }));

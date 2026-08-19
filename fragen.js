@@ -5,11 +5,22 @@
 // Alle Texte sind selbst geschrieben, aus keiner Anleitung und keiner App
 // abgetippt. Spielregeln sind frei, fremde Fragenlisten nicht.
 //
-// Zwei Stapel, beide ohne Alkohol, Sex und Koerperliches – dieses Spiel soll
-// bewusst ohne die 18+-Maschinerie aus „Ich hab noch nie" auskommen:
+// Drei Stapel:
 //
-//   HARMLOS  laesst sich am Familientisch vorlesen
-//   FRECH    zielt auf Macken und Peinlichkeiten, bleibt aber jugendfrei
+//   HARMLOS    laesst sich am Familientisch vorlesen
+//   FRECH      Macken, Peinlichkeiten, unangenehme Wahrheiten – aber ohne
+//              Alkohol, Sex und Koerperliches, also weiter jugendfrei
+//   SCHMUTZIG  ab 18: Sex, Kink, Rausch, Betrug, Dinge, die man erlebt und
+//              nie erzaehlt. Nur ueber den Modus `ab18` erreichbar, und der
+//              haengt hinter derselben Abfrage wie der 18+-Stapel in
+//              „Ich hab noch nie"
+//
+// Warum der dritte Stapel Archetypen abklappert statt nur Themen: das Spiel
+// zeigt auf *Personen*. Eine Frage trifft nur, wenn am Tisch jemand sitzt, auf
+// den sie passt. Deshalb ist SCHMUTZIG bewusst nach Menschentypen gebaut – die
+// Stillen, die Lauten, die Gleichgueltigen, die chronisch Onlinen, die mit dem
+// Spiegelfoto – und nicht als eine lange Reihe Sexfragen. Wer sonst nie
+// gewaehlt wird, wird hier gewaehlt.
 
 export const HARMLOS = [
   "würde bei einem Stromausfall zuerst die Kerzen finden?",
@@ -146,13 +157,306 @@ export const FRECH = [
   "würde stundenlang über Serien diskutieren?",
   "hat den unerwartetsten Lieblingsfilm?",
   "würde bei einem Wettessen gewinnen und es bereuen?",
+
+  // Die Stillen
+  "hat schon mal so getan, als wäre niemand zu Hause, obwohl das Licht brannte?",
+  "übt vor einem Anruf den ersten Satz?",
+  "geht von einer Feier, ohne sich zu verabschieden?",
+  "würde einen Umweg gehen, um niemanden grüßen zu müssen?",
+  "sagt zu und hofft insgeheim, dass es abgesagt wird?",
+  "steht auf jeder Feier in der Küche, weil dort weniger los ist?",
+  "hat für jede Einladung denselben fertigen Ausredensatz?",
+  "kennt nach acht Jahren die Namen der Nachbarn nicht?",
+  "drückt einen Anruf weg und schreibt danach, gerade keine Zeit gehabt zu haben?",
+  "hat schon mal an einer Theke gestanden und ist ohne Bestellung wieder gegangen?",
+  "wartet, bis der Flur leer ist, bevor die Wohnungstür aufgeht?",
+  "freut sich am meisten, wenn ein Treffen abgesagt wird?",
+
+  // Die Lauten
+  "hat den kürzesten Weg von ruhig zu laut?",
+  "würde bei einem Streit im Straßenverkehr aussteigen?",
+  "hat schon mal etwas geworfen und danach behauptet, es sei gefallen?",
+  "schreibt Nachrichten, die man besser nicht abschickt, und schickt sie ab?",
+  "hebt eine Beleidigung drei Jahre lang auf?",
+  "wird zuerst persönlich, wenn eine Diskussion eng wird?",
+  "hat schon mal eine Tür so zugeschlagen, dass etwas herunterfiel?",
+  "würde sich beim Freundschaftsspiel mit dem Schiedsrichter anlegen?",
+  "hat den lockersten Finger auf der Hupe?",
+  "beendet einen Streit, indem einfach lauter geredet wird?",
+
+  // Die Gleichgültigen
+  "sagt, es sei egal, und meint es tatsächlich?",
+  "hat noch nie jemanden zurückgerufen?",
+  "würde beim Feueralarm den Kaffee austrinken?",
+  "hat schon mal eine Beziehung in der Mittagspause per Nachricht beendet?",
+  "findet Geburtstage grundsätzlich übertrieben?",
+  "antwortet auf eine schlechte Nachricht mit einem Schulterzucken?",
+  "kommt zu spät und entschuldigt sich nicht?",
+  "hat noch nie eine Frist ernst genommen?",
+
+  // Vor der Kamera
+  "braucht für ein Foto am längsten und sagt, es sei zufällig entstanden?",
+  "kennt das beste Licht in jedem Raum sofort?",
+  "hat mehr Fotos von sich als von allen anderen zusammen?",
+  "löscht ein Bild wieder, wenn zu wenig Reaktionen kommen?",
+  "schaut sofort nach, wer eine Story zuerst gesehen hat?",
+  "postet etwas, damit genau eine Person es sieht?",
+  "hat für ein Bild schon mal etwas Gefährliches gemacht?",
+  "hat den größten Unterschied zwischen Profil und Wohnzimmer?",
+  "stellt das Essen um, bevor jemand essen darf?",
+
+  // Im Film
+  "wäre im Horrorfilm zuerst tot?",
+  "wäre die Person, die vorschlägt, sich aufzuteilen?",
+  "würde nachsehen gehen, was im Keller so komisch klingt?",
+  "wäre im Raubzug der Teil der Gruppe, der zu viel redet?",
+  "wäre der Bösewicht, der die ganze Zeit über nett war?",
+  "würde in einer Apokalypse zuerst gebissen, weil da noch jemand zu retten war?",
+  "würde die Gruppe für ein warmes Bett verraten?",
+  "wäre in der Liebeskomödie die Person, die zum Flughafen rennt?",
+  "wäre die Person, die am Flughafen nicht mehr wartet?",
+  "würde im Katastrophenfilm zuerst das Handy herausholen?",
+  "wäre der Nebencharakter, an den sich am Ende alle erinnern?",
+  "würde im Verhör als Erstes reden?",
+
+  // Was wirklich passiert
+  "hat schon mal geweint und behauptet, es seien Allergien?",
+  "hat schon mal eine Freundschaft ohne Streit einfach auslaufen lassen?",
+  "hat schon mal jemanden gesucht, den man seit zehn Jahren nicht gesehen hat?",
+  "hat schon mal auf einer Beerdigung gelacht?",
+  "hat schon mal ein Geschenk an die Person weiterverschenkt, von der es kam?",
+  "hat schon mal eine Krankheit erfunden, um abzusagen?",
+  "hat schon mal etwas gefunden und lieber nicht nachgefragt?",
+  "schaut jemandem beim Reden ins Gesicht und denkt an etwas völlig anderes?",
+  "hat schon mal jemandem eine Entscheidung ausgeredet und sich später gefreut?",
+  "hat schon mal ein Haustier heimlich lieber gemocht als einen Menschen?",
+  "hat schon mal etwas mitgenommen, das nicht bezahlt war?",
+  "hat schon mal im Vorstellungsgespräch etwas erfunden?",
+  "hat schon mal jemanden ausgeladen, weil jemand anderes zugesagt hat?",
+  "gönnt anderen den Erfolg am wenigsten und sagt es nie?",
 ];
 
-export const MODI = ["harmlos", "gemischt", "frech"];
+
+/**
+ * Ab 18. Alkohol, Sex, Kink, Betrug – und die Sorte Frage, auf die man am Tisch
+ * jemanden zeigen kann, ohne dass es je jemand zugeben wuerde.
+ *
+ * Erreichbar nur ueber den Modus `ab18`, und der haengt hinter einer Abfrage
+ * (siehe `public/app.js`). Voreingestellt ist weiterhin `gemischt`, und weder
+ * `harmlos` noch `frech` noch `gemischt` fassen diesen Stapel je an.
+ *
+ * Auch hier gilt die Hausregel: geschlechtsneutral. Die Frage zeigt auf eine
+ * echte Person am Tisch; ein „er“ oder „sie“ traefe jedes Mal jemanden falsch.
+ */
+export const SCHMUTZIG = [
+  // Anbahnung
+  "hat den größten Altersunterschied auf dem Konto?",
+  "hat mehr Matches als Gespräche?",
+  "hat schon mal jemanden geghostet und ist dieser Person danach im Supermarkt begegnet?",
+  "weiß beim ersten Date schon, ob es Sex geben wird?",
+  "hat einen Typ, den alle kennen und niemand versteht?",
+  "hat schon mal jemanden mit nach Hause genommen und am Morgen den Namen nicht mehr gewusst?",
+  "hatte schon mal zwei Dates an einem Tag?",
+  "hat schon mal ein Date abgebrochen, weil das Foto gelogen hat?",
+  "war schon mal selbst das Foto, das gelogen hat?",
+  "schreibt Leuten zurück, die man eigentlich nie wiedersehen wollte?",
+  "hat die längste Trockenphase und redet am meisten über Sex?",
+  "hat schon mal mit jemandem geschlafen, nur um es hinter sich zu haben?",
+  "schreibt Ex-Partnern nachts um zwei?",
+  "hat sich schon mal durch ein fremdes Profil bis ganz nach unten gescrollt?",
+  "hat die meisten gespeicherten Nummern, die hier niemand kennt?",
+  "würde für eine Nacht quer durch die Stadt fahren?",
+  "sagt, es sei nichts Ernstes, und meint das Gegenteil?",
+  "sagt, es sei ernst, und meint das Gegenteil?",
+  "schreibt noch mit den Freunden eines Ex?",
+  "fängt etwas an, obwohl von Anfang an klar ist, dass es schiefgeht?",
+  "hat schon mal jemanden geküsst, nur damit jemand anderes es sieht?",
+  "hat schon mal mit jemandem geschlafen, den man nicht mal leiden konnte?",
+  "räumt vorher die Wohnung auf und behauptet, es sei immer so?",
+  "hat schon mal jemanden aus dieser Art Freundeskreis geküsst und nie darüber geredet?",
+
+  // Im Bett
+  "hat schon mal den falschen Namen gesagt?",
+  "denkt zwischendurch ans Abendessen?",
+  "hat den peinlichsten Ort auf der Liste?",
+  "hatte schon mal Sex, während jemand anderes in der Wohnung war?",
+  "hat schon mal die Nachbarn geweckt?",
+  "hat schon mal etwas vorgeschlagen und es in derselben Sekunde bereut?",
+  "hat schon mal mittendrin gelacht und es danach erklären müssen?",
+  "hat schon mal so getan, als wäre es großartig gewesen?",
+  "würde in einem fremden Bett am längsten die eigene Socke suchen?",
+  "hat schon mal etwas kaputt gemacht, das gar nicht mitspielen sollte?",
+  "hat schon mal jemanden mitten in der Nacht nach Hause geschickt?",
+  "wurde schon mal mitten in der Nacht nach Hause geschickt?",
+  "hat auf einer Feier schon mal eine Tür abgeschlossen?",
+  "hat schon mal etwas im Hotelzimmer liegen lassen, wonach man nicht fragen kann?",
+  "hat den größten Unterschied zwischen Ruf und Wirklichkeit?",
+  "redet am lautesten darüber und am wenigsten aus Erfahrung?",
+  "sagt am wenigsten und hat am meisten erlebt?",
+  "hat schon mal ein Foto verschickt und es zwei Sekunden später zurückgenommen?",
+  "hat schon mal ein Foto an die falsche Person geschickt?",
+  "hat schon mal dabei an jemand anderen gedacht?",
+  "ruft danach das Taxi, bevor der Satz zu Ende ist?",
+  "hat die längste Liste an Dingen, die einmal ausprobiert und nie wiederholt wurden?",
+  "hat schon mal etwas gesucht, das man nie laut aussprechen würde?",
+  "hat in einer fremden Wohnung schon mal das Nachtschränkchen aufgemacht?",
+  "hat in der eigenen Schublade am meisten zu erklären?",
+  "hat schon mal etwas bestellt und die Verpackung sofort im Müll versteckt?",
+  "würde vor einem Sexshop drei Runden drehen, bevor die Tür aufgeht?",
+  "wäre dann zwanzig Minuten drin geblieben?",
+  "hat schon mal ein Geständnis gemacht und es am nächsten Tag abgestritten?",
+  "hat schon mal die Nachbarn gehört und mitgezählt?",
+
+  // Härtere Gangart
+  "würde Handschellen mitbringen, ohne vorher zu fragen?",
+  "würde beim Wort Handschellen am schnellsten das Thema wechseln?",
+  "hat ein Safeword und hat es nie gebraucht?",
+  "hat eins und braucht es regelmäßig?",
+  "gibt gern Anweisungen und merkt es selbst nicht?",
+  "nimmt am liebsten welche entgegen?",
+  "hat einen Fetisch und tut so, als wäre das der Normalzustand?",
+  "hätte zu Hause eine Kiste, die niemand aufmachen darf?",
+  "würde in einem Club mit Dresscode auffallen, weil zu viel angezogen?",
+  "hat eine schriftliche Liste, was geht und was nicht?",
+  "würde das Wort brav in diesem Raum am ehesten falsch verstehen?",
+  "hat den unerwartetsten Geschmack, wenn es darauf ankommt?",
+  "würde einen ganzen Abend allein mit Blicken bestreiten?",
+  "hat schon mal etwas ausprobiert, nur weil es in einer Serie vorkam?",
+  "wird beim Thema Rollenspiel zuerst rot und weiß dann am meisten?",
+  "hat mehr Seile im Schrank als Wäscheleinen im Haus?",
+  "würde eine Augenbinde für ein Gesellschaftsspiel halten?",
+  "hat schon mal jemanden gebeten, leiser zu sein, und das Gegenteil bewirkt?",
+
+  // Recht behalten wollen
+  "erklärt am Tisch, wie Dating heute wirklich funktioniert?",
+  "hat eine Theorie, warum alle anderen ihre Beziehungen falsch führen?",
+  "war schon mal nachts um vier wach und hat über den eigenen Marktwert gelesen?",
+  "kennt den eigenen Marktwert auf zwei Kommastellen?",
+  "hat schon mal einen Kommentarstreit mit Fremden geführt und sich als Sieger gefühlt?",
+  "schiebt es grundsätzlich auf die anderen?",
+  "hat schon mal jemanden abgelehnt und es zwei Jahre später laut bereut?",
+  "würde ein Spiegelfoto machen und behaupten, es sei aus Versehen entstanden?",
+  "erklärt anderen ihre eigenen Erfahrungen und wundert sich über den Rest des Abends?",
+  "hat die meiste Lebenszeit damit verbracht, im Internet recht zu behalten?",
+  "hat einen Ordner mit Screenshots von Streitgesprächen?",
+  "fängt beim Thema Beziehung sofort mit Statistik an?",
+
+  // Chronisch online
+  "hat die meisten offenen Tabs, die niemand sehen darf?",
+  "löscht den Verlauf, bevor jemand das Zimmer betritt?",
+  "hat den privaten Modus praktisch als Startseite?",
+  "dreht beim Wort Bildschirmzeit am schnellsten das Handy um?",
+  "hat schon mal einen ganzen Sonntag im Bett verbracht, ohne zu schlafen?",
+  "kennt sich in einem Genre aus, das hier nie genannt wird?",
+  "hat schon mal etwas geschaut und danach ernsthaft über das eigene Leben nachgedacht?",
+  "hat die kürzeste Aufmerksamkeitsspanne und die längste Wiedergabeliste?",
+  "legt das Handy weg und holt es nach vier Sekunden zurück?",
+  "würde ein Wochenende ohne Internet nicht überstehen?",
+  "hat schon mal eine Datei umbenannt, damit sie harmlos aussieht?",
+  "hat den peinlichsten Suchverlauf und das ruhigste Gesicht dazu?",
+  "hat mehr Zeit allein vor einem Bildschirm verbracht als mit allen hier zusammen?",
+  "würde bei einer Kontrolle des eigenen Handys als Erstes weglaufen?",
+
+  // Nach dem vierten Getränk
+  "sagt nach drei Getränken die Wahrheit, die alle längst kannten?",
+  "ruft betrunken Leute an, die man nüchtern nie anrufen würde?",
+  "ist schon mal in einer Stadt aufgewacht und wusste nicht, welche?",
+  "war schon mal so betrunken, dass andere den Abend erzählen mussten?",
+  "hat den peinlichsten Auftritt auf einer Firmenfeier?",
+  "hat auf einer Feier schon mal etwas gegessen, das niemandem gehörte?",
+  "hat schon mal in einen Blumentopf gekotzt und nichts gesagt?",
+  "hat beim Feiern schon mal das Handy verloren und nie wiedergesehen?",
+  "hält am längsten durch und erinnert sich am wenigsten?",
+  "wird beim Trinken zuerst sentimental?",
+  "wird zuerst laut?",
+  "verschwindet auf jeder Feier für eine Stunde und erklärt es nie?",
+  "hat schon mal jemanden geküsst und es am nächsten Tag geleugnet?",
+  "hat schon mal auf einer Feier geweint und es auf den Rauch geschoben?",
+  "liest am Morgen danach die eigenen Nachrichten und legt das Handy weg?",
+  "bleibt nach einer Nacht noch zum Frühstück und kocht Kaffee?",
+
+  // Was zwischen zwei Menschen passiert
+  "hat in einer Beziehung schon mal an jemand anderen gedacht?",
+  "hat schon mal betrogen und es nie erzählt?",
+  "hat schon mal in einem fremden Handy gelesen, während jemand duschte?",
+  "hat schon mal die Nachrichten des eigenen Partners kontrolliert?",
+  "hat schon mal Schluss gemacht, nur um die Reaktion zu sehen?",
+  "wartet lieber, bis der andere Schluss macht?",
+  "hat schon mal eine Beziehung geführt, von der hier niemand wusste?",
+  "hat schon mal jemanden verlassen und es am selben Abend bereut?",
+  "hat schon mal jemanden zurückgenommen, obwohl alle abgeraten haben?",
+  "hat im Streit schon mal etwas gesagt, das man nicht zurücknehmen kann?",
+  "kann die Freunde des Partners nicht ausstehen und sagt es nie?",
+  "wäre erleichtert, wenn eine bestimmte Person nie wieder schreiben würde?",
+  "hat den Ex, über den nie geredet wird?",
+  "hat schon mal jemanden laut mit einem Ex verglichen?",
+  "hat in einer Beziehung schon mal heimlich Geld ausgegeben?",
+  "hat schon mal versprochen, sich zu ändern, und es nicht einmal versucht?",
+  "würde eine offene Beziehung vorschlagen und es sofort bereuen?",
+  "hat den größten Unterschied zwischen dem, was gesucht wird, und dem, was genommen wird?",
+  "hat schon mal eine Liebeserklärung gemacht und keine Antwort bekommen?",
+  "würde am ehesten heiraten, nur um es hinter sich zu haben?",
+
+  // Sagt man nicht laut
+  "hat schon mal beim Arzt gelogen?",
+  "hat den längsten Zeitraum ohne frische Bettwäsche?",
+  "würde am ehesten zugeben, dass die eigene Wohnung riecht?",
+  "hat schon mal dieselbe Unterhose zweimal getragen und es abgestritten?",
+  "hat schon mal in einem fremden Bad den Schrank geöffnet?",
+  "hat schon mal so getan, als sei die Toilette vorher schon so gewesen?",
+  "hat den unangenehmsten Arztbesuch hinter sich und erzählt ihn nie?",
+  "hat schon mal etwas gestohlen und nie zurückgegeben?",
+  "hat schon mal den Führerschein riskiert und es niemandem erzählt?",
+  "hat schon mal jemanden bei etwas erwischt und geschwiegen?",
+  "hat schon mal jemanden angeschwärzt und es einem anderen untergeschoben?",
+  "hat die meiste Erfahrung mit Dingen, über die hier nicht geredet wird?",
+  "hat schon mal eine Nacht auf einer Wache verbracht?",
+  "hat schon mal etwas angezündet, das nicht brennen sollte?",
+  "hat schon mal eine Unterschrift gefälscht?",
+  "hat schon mal eine Versicherung angelogen?",
+  "wird bei einer Kontrolle als Erstes nervös?",
+
+  // Dieselben Typen, nur nachts
+  //
+  // Die Stillen, die Lauten, die Gleichgueltigen und die vor der Kamera
+  // stehen jugendfrei schon in FRECH. Hier stehen sie noch einmal – damit im
+  // 18+-Stapel wirklich jeder Typ am Tisch etwas abbekommt und nicht immer
+  // dieselben zwei gewaehlt werden.
+  "sagt den ganzen Abend nichts und schreibt danach die längste Nachricht?",
+  "ist am Tisch am leisesten und zu Hause am lautesten?",
+  "würde nie den ersten Schritt machen und sich jahrelang darüber ärgern?",
+  "hat schon mal jemanden jahrelang gemocht und nie ein Wort gesagt?",
+  "hat den vollsten Kopf und die leerste Chronik?",
+  "fängt einen Streit an, nur damit versöhnt werden muss?",
+  "wirft im Streit als Erstes mit dem Wort Schluss?",
+  "hat schon mal auf einer Feier jemanden angeschrien, den man kaum kannte?",
+  "hat den kürzesten Weg vom Kuss zum Krach?",
+  "schaut danach als Erstes aufs Handy?",
+  "sagt, dass es nichts bedeutet, während die andere Person zuhört?",
+  "hat schon mal am Morgen gefragt, wann der nächste Bus fährt?",
+  "hat schon mal jemandem den Namen falsch geschrieben, mit dem man geschlafen hat?",
+  "fotografiert eher das Bett als die Person darin?",
+  "würde ein Date nach dem Hintergrund für Fotos aussuchen?",
+  "macht Dinge vor allem, damit man sie danach erzählen kann?",
+  "hat schon mal etwas gepostet, um genau einer Person wehzutun?",
+  "hat mehr Spiegel als Fenster?",
+  "erklärt auch im Bett noch Dinge, die niemand wissen wollte?",
+  "wäre im Krimi die Affäre, durch die alles auffliegt?",
+  "wäre die Person, an der die Ehe im Film zerbricht?",
+  "hätte in einer Serie den Handlungsstrang, den alle überspringen?",
+  "bekäme die Szene, die man mit den Eltern nicht schauen kann?",
+  "wäre die Figur, die alle wollen und niemand behalten kann?",
+  "hätte im Abspann die längste Liste an Nebenrollen?",
+];
+
+export const MODI = ["harmlos", "gemischt", "frech", "ab18"];
 
 /** Der Stapel, aus dem in diesem Modus gezogen wird. */
 export function stapelFuer(modus) {
   if (modus === "harmlos") return HARMLOS.slice();
   if (modus === "frech") return FRECH.slice();
+  // `ab18` zieht ausschliesslich aus SCHMUTZIG. Wer den Modus einstellt, will
+  // genau diese Fragen – nicht jede dritte Runde eine ueber Einkaufszettel.
+  if (modus === "ab18") return SCHMUTZIG.slice();
   return [...HARMLOS, ...FRECH];
 }

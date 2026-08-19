@@ -541,27 +541,37 @@ button, input { font: inherit; color: inherit; }
 .podest-zahl { font-weight: 900; font-size: 1.2rem; color: var(--akzent); text-align: right; }
 .podest-zahl small { display: block; font-size: 10px; color: var(--muted); font-weight: 600; }
 
-/* --- Überlagerung: Hilfe ------------------------------------------------- */
+/* --- Der 18+-Stapel ------------------------------------------------------
+   Der vierte Knopf soll sich von den drei harmlosen absetzen, auch ausgewählt.
+   Vier Knöpfe statt drei werden eng: „18+" ist deshalb absichtlich kurz. */
+.seg-rot { color: #ff7b9c; }
+.seg-rot.sel { background: rgba(255, 46, 136, .22); color: #ffd0dd; }
+.roomrow.rot { border-color: rgba(255, 46, 136, .45); }
+.roomrow.rot .roomrow-meta { color: #ff7b9c; }
 
-#help {
+/* --- Überlagerungen: Hilfe und 18+ --------------------------------------- */
+
+#help, #ab18Gate {
   position: fixed; inset: 0; z-index: 80;
   background: rgba(6, 3, 12, .92);
   display: flex; align-items: center; justify-content: center;
   padding: 24px 18px;
   overflow-y: auto;
 }
-#help[hidden] { display: none; }
+#help[hidden], #ab18Gate[hidden] { display: none; }
 
-.help-inner {
+.help-inner, .gate-inner {
   max-width: 460px; width: 100%;
   background: var(--panel); border: 1px solid var(--line);
   border-radius: 20px; padding: 24px;
   display: flex; flex-direction: column; gap: 12px;
   box-shadow: var(--shadow);
 }
-.help-inner h2 { font-size: 1.2rem; }
+.help-inner h2, .gate-inner h2 { font-size: 1.2rem; }
 .help-inner ul { padding-left: 18px; display: flex; flex-direction: column; gap: 9px; }
 .help-inner li { font-size: .92rem; line-height: 1.45; text-wrap: pretty; }
+.gate-inner p { font-size: .95rem; line-height: 1.5; text-wrap: pretty; }
+.gate-klein { font-size: .82rem !important; color: var(--muted); }
 
 @media (prefers-reduced-motion: reduce) {
   .chip, .frage, .podest, .wahl, .erg { transition: none; }

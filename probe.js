@@ -11,7 +11,7 @@
 // Gegen die Live-Fassung statt gegen den lokalen Server:
 //   WS_URL=wss://inf-zeus.de/amehesten/ws deno task probe
 
-import { FRECH, HARMLOS, stapelFuer } from "./fragen.js";
+import { FRECH, HARMLOS, MODI, SCHMUTZIG, stapelFuer } from "./fragen.js";
 
 const PORT = Deno.env.get("PORT") ?? "8074";
 const URL_WS = Deno.env.get("WS_URL") ?? `ws://127.0.0.1:${PORT}/ws`;
@@ -23,7 +23,7 @@ function client(name) {
   };
   c.ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
-    if (m.t === "joined") c.you = m.you;
+    if (m.t === "joined") { c.you = m.you; c.token = m.token; }
     if (m.t === "room") c.room = m;
     if (m.t === "runde") c.runde = m;
     if (m.t === "final") c.final = m;
@@ -47,7 +47,9 @@ async function bis(bedingung, was, ms = 3000) {
 
 // --- Erst die Fragenstapel, ohne Server -------------------------------------
 
-for (const [name, liste] of [["HARMLOS", HARMLOS], ["FRECH", FRECH]]) {
+const STAPEL = [["HARMLOS", HARMLOS], ["FRECH", FRECH], ["SCHMUTZIG", SCHMUTZIG]];
+
+for (const [name, liste] of STAPEL) {
   if (new Set(liste).size !== liste.length) throw new Error(`${name} enthält Doppelte`);
   for (const f of liste) {
     // Jede Frage ergaenzt „Wer von euch …?" – klein anfangen, mit Fragezeichen
@@ -56,15 +58,39 @@ for (const [name, liste] of [["HARMLOS", HARMLOS], ["FRECH", FRECH]]) {
     if (f[0] !== f[0].toLowerCase()) throw new Error(`${name}: groß geschrieben: „${f}"`);
   }
 }
+// Auch ueber die Stapel hinweg: „gemischt" wirft zwei davon zusammen, eine
+// Dublette kaeme sonst in derselben Partie zweimal.
+const alleFragen = STAPEL.flatMap(([, l]) => l);
+const doppelt = alleFragen.filter((f, i) => alleFragen.indexOf(f) !== i);
+if (doppelt.length) throw new Error("Über die Stapel hinweg doppelt: " + doppelt.join(" | "));
+
 if (stapelFuer("gemischt").length !== HARMLOS.length + FRECH.length) {
   throw new Error("Gemischt ist nicht die Summe beider Stapel");
 }
-console.log(`ok  Fragen: ${HARMLOS.length} harmlos, ${FRECH.length} frech, keine Doppelten`);
+// Der 18+-Stapel darf nirgendwo sonst auftauchen. Sonst haette „harmlos" oder
+// „gemischt" plötzlich Fragen, für die es die Abfrage im Client gibt.
+for (const m of ["harmlos", "gemischt", "frech"]) {
+  const stapel = new Set(stapelFuer(m));
+  const durchgerutscht = SCHMUTZIG.filter((f) => stapel.has(f));
+  if (durchgerutscht.length) {
+    throw new Error(`Modus ${m} zieht 18+-Fragen: ` + durchgerutscht.join(" | "));
+  }
+}
+if (stapelFuer("ab18").length !== SCHMUTZIG.length) {
+  throw new Error("Der Modus ab18 zieht nicht genau den 18+-Stapel");
+}
+if (!MODI.includes("ab18")) throw new Error("ab18 fehlt in MODI");
+console.log(
+  `ok  Fragen: ${HARMLOS.length} harmlos, ${FRECH.length} frech, ` +
+    `${SCHMUTZIG.length} ab 18 – keine Doppelten, 18+ nur im eigenen Modus`,
+);
 
 // --- Jetzt der Server -------------------------------------------------------
 
 const A = client("Anna"), B = client("Ben"), C = client("Cem"), D = client("Dana");
 const alleC = [A, B, C, D];
+/** Die Clients der Verbindungsproben – am Ende genauso auf Fehler geprüft. */
+const extra = [];
 await Promise.all(alleC.map((c) => c.offen));
 
 A.send({ t: "create", name: "Anna", isPublic: true, modus: "gemischt" });
@@ -76,6 +102,96 @@ B.send({ t: "join", code, name: "Ben" });
 C.send({ t: "join", code, name: "Cem" });
 D.send({ t: "join", code, name: "Dana" });
 await bis(() => A.room.players.length === 4, "vier Spieler");
+
+// --- Weg und wieder da, im Warteraum ----------------------------------------
+//
+// Das ruhigste Spiel im Haus: zwischen zwei Knopfdruecken wird geredet, nicht
+// getippt, und genau dann legen Leute das Handy weg. Auf dem Handy ist jeder
+// gesperrte Bildschirm eine gekappte Verbindung. Frueher war der Platz im
+// Warteraum dann sofort frei – wer zurueckkam, war ein neuer Spieler auf einem
+// neuen Platz, und wenn die Runde inzwischen lief, kam er gar nicht mehr rein.
+// Seit `lobbyGraceMs` bleibt der Platz stehen und der Wiedereinstieg fuehrt
+// zurueck auf denselben.
+
+const E = client("Eren");
+extra.push(E);
+await E.offen;
+E.send({ t: "join", code, name: "Eren" });
+await bis(() => E.you && A.room.players.length === 5, "Eren sitzt");
+const erenId = E.you, erenToken = E.token;
+
+E.ws.close();                                    // wegwischen, kein „leave"
+await bis(
+  () => A.room.players.find((p) => p.id === erenId)?.connected === false,
+  "Eren gilt als abwesend",
+);
+if (A.room.players.length !== 5) {
+  throw new Error("Der Platz wurde im Warteraum sofort geräumt");
+}
+console.log("ok  wer im Warteraum die Verbindung verliert, behält seinen Platz");
+
+const E2 = client("Eren");
+extra.push(E2);
+await E2.offen;
+E2.send({ t: "join", code, token: erenToken, name: "Eren" });
+await bis(
+  () => E2.you === erenId &&
+    A.room.players.find((p) => p.id === erenId)?.connected === true,
+  "Eren zurück auf seinem Platz",
+);
+if (A.room.players.length !== 5) {
+  throw new Error("Beim Wiedereinstieg ist ein zweiter Platz entstanden");
+}
+console.log("ok  Wiedereinstieg landet auf demselben Platz, nicht auf einem neuen");
+
+E2.send({ t: "leave" });
+await bis(() => A.room.players.length === 4, "Eren endgültig raus");
+console.log("ok  endgültig geht nur, wer selbst auf Verlassen tippt");
+
+// --- Das Hostzeichen wandert nicht bei jedem gesperrten Bildschirm ----------
+//
+// In einem eigenen Raum, damit die Partie oben davon nichts merkt. Wandert das
+// Zeichen sofort, findet der Host seine Runde nach dem Blick aufs Handy in
+// fremder Hand – und die Einstellungen sind weg.
+
+{
+  const H1 = client("Host"), H2 = client("Gast");
+  extra.push(H1, H2);
+  await Promise.all([H1.offen, H2.offen]);
+  H1.send({ t: "create", name: "Host", isPublic: false, modus: "harmlos" });
+  await bis(() => H1.room, "zweiter Raum");
+  const code2 = H1.room.code;
+  H2.send({ t: "join", code: code2, name: "Gast" });
+  await bis(() => H2.room?.players.length === 2, "zwei im zweiten Raum");
+  const hostId = H1.you, hostToken = H1.token;
+  if (H2.room.hostId !== hostId) throw new Error("Der Ersteller ist nicht Host");
+
+  H1.ws.close();
+  await bis(
+    () => H2.room.players.find((p) => p.id === hostId)?.connected === false,
+    "Host gilt als abwesend",
+  );
+  await warte(500);
+  if (H2.room.hostId !== hostId) {
+    throw new Error("Das Hostzeichen ist sofort weitergewandert");
+  }
+  console.log("ok  das Hostzeichen bleibt liegen, solange der Host nur weg ist");
+
+  const H3 = client("Host");
+  extra.push(H3);
+  await H3.offen;
+  H3.send({ t: "join", code: code2, token: hostToken, name: "Host" });
+  await bis(
+    () => H3.you === hostId && H3.room?.hostId === hostId,
+    "Host zurück, Zeichen noch da",
+  );
+  console.log("ok  der Host kommt zurück und hat seine Runde noch");
+  H3.send({ t: "leave" });
+  H2.send({ t: "leave" });
+  await warte(120);
+  H3.ws.close();
+  H2.ws.close();
+}
 
 A.send({ t: "start" });
 await warte(150);
@@ -175,6 +291,41 @@ await bis(() => A.runde.frage !== vorher, "Frage getauscht");
 if (A.runde.stimmenAb !== 0) throw new Error("Die Stimmen wurden beim Tausch nicht geleert");
 console.log("ok  der Host tauscht die Frage, dabei werden die Stimmen geleert");
 
+// --- Weg und wieder da, mitten in der Runde ---------------------------------
+//
+// Der zweite gemeldete Fall: Bildschirm gesperrt, während die anderen reden.
+// Der Platz muss stehen bleiben, und der Wiedereinstieg muss die laufende
+// Runde mitbringen – sonst sitzt man vor einem leeren Bildschirm, bis der Host
+// weiterschaltet.
+
+const danaId = D.you, danaToken = D.token, danaRunde = A.runde.n;
+D.ws.close();
+await bis(
+  () => A.room.players.find((p) => p.id === danaId)?.connected === false,
+  "Dana gilt als abwesend",
+);
+if (A.room.players.length !== 4) {
+  throw new Error("Danas Platz war mitten in der Runde sofort weg");
+}
+
+const D2 = client("Dana");
+extra.push(D2);
+await D2.offen;
+D2.send({ t: "join", code, token: danaToken, name: "Dana" });
+await bis(
+  () => D2.you === danaId && D2.runde?.n === danaRunde,
+  "Dana zurück in der laufenden Runde",
+);
+if (A.room.players.length !== 4) {
+  throw new Error("Beim Wiedereinstieg ins Spiel entstand ein zweiter Platz");
+}
+if (!D2.runde.frage) throw new Error("Die laufende Frage kam beim Wiedereinstieg nicht mit");
+console.log("ok  mitten in der Runde weg und zurück: derselbe Platz, dieselbe Frage");
+
+// Ab hier spricht Dana über die neue Verbindung.
+D.ws = D2.ws;
+D.send = D2.send;
+
 // --- Ein Wähler verschwindet: die Runde darf nicht hängen bleiben ------------
 
 A.send({ t: "stimme", ziel: B.you });
@@ -212,8 +363,9 @@ await bis(() => A.room.phase === "lobby", "zurück im Warteraum");
 if (A.room.players.some((p) => p.punkte !== 0)) throw new Error("Punkte nicht zurückgesetzt");
 console.log("ok  Nochmal setzt alles zurück");
 
-if (alleC.some((c) => c.fehler.length)) {
-  throw new Error("Fehlermeldungen: " + JSON.stringify(alleC.map((c) => c.fehler)));
+const geprueft = [...alleC, ...extra];
+if (geprueft.some((c) => c.fehler.length)) {
+  throw new Error("Fehlermeldungen: " + JSON.stringify(geprueft.map((c) => c.fehler)));
 }
 console.log("\nALLES GRÜN");
 Deno.exit(0);
