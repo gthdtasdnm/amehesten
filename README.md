@@ -58,7 +58,7 @@ eine 👑. Am Ende steht, über wen am meisten geredet wurde.
 |---|---|
 | `HARMLOS` | 81 Fragen, die man an einem Familientisch vorlesen kann |
 | `FRECH` | 115 Fragen über Macken, Peinlichkeiten und unangenehme Wahrheiten |
-| `SCHMUTZIG` | 176 Fragen ab 18: Sex, Kink, Rausch, Betrug |
+| `SCHMUTZIG` | 243 Fragen ab 18 |
 
 Vier Modi:
 
@@ -76,16 +76,62 @@ deshalb zieht der **Server** und nicht jeder Client für sich.
 durchrutscht. Das ist die eigentliche Grenze: wer „gemischt" spielt, darf nie
 eine davon sehen.
 
+### Vermutung, nicht Beichte
+
+**Die wichtigste Regel im ganzen Spiel.** „Wer von euch *würde* am ehesten …?"
+– nicht „wer *hat* schon mal …?". Der Unterschied entscheidet, was für ein
+Spiel das hier ist:
+
+Bei „wer hat schon mal" kennt nur **eine** Person die Antwort. Die anderen
+raten nicht, sie wissen es schlicht nicht. Die Auflösung ist dann ein Outing
+oder eine Lüge, und der Getroffene muss sich erklären. Das ist ein Verhör –
+und es ist außerdem das Spiel nebenan, `/nochnie/`.
+
+Bei „wer würde am ehesten" gibt es gar keine Wahrheit, nur das Urteil des
+Tisches. Niemand kann falsch liegen, niemand muss etwas zugeben, und der
+Gesprächsanlass ist nicht „stimmt das?", sondern „warum denkt ihr das über
+mich?".
+
+Genau das macht den 18+-Stapel erst spielbar: als Vermutung geht eine Frage
+durch, die als Geständnis den Abend beenden würde.
+
+Erlaubt sind zwei Formen:
+
+1. **Die Vermutung** – „würde am ehesten …", „wäre …", „hätte …"
+2. **Die Zuschreibung im Jetzt** – „hat den größten …", „sagt am häufigsten
+   …". Auch das schätzt der Tisch, es blickt nur nicht zurück.
+
+Verboten ist die Vergangenheit. `probe.js` lässt jede Frage mit „schon mal"
+durchfallen – das ist die Form, in der es sich einschleicht, und sie ist
+eindeutig. Gleiche Bauart wie die Wortliste in Flaschendrehen: eine harte
+Grenze, die nicht vom guten Willen des nächsten Durchgangs abhängt.
+
 ### Warum der 18+-Stapel nach Menschentypen sortiert ist
 
 Das Spiel zeigt auf **Personen**, nicht auf Themen. Eine Frage trifft nur, wenn
 am Tisch jemand sitzt, auf den sie passt – eine lange Reihe Sexfragen läuft
 nach zehn Runden leer, weil immer dieselben zwei gewählt werden. `SCHMUTZIG`
-ist deshalb nach Archetypen gebaut: die Stillen, die Lauten, die
-Gleichgültigen, die chronisch Onlinen, die mit dem Spiegelfoto, die mit der
-Theorie darüber, warum alle anderen falsch liegen. Dazu Filmklischees und die
-Sorte Sache, die jeder erlebt hat und niemand erzählt. So wird auch gewählt,
-wer sonst nie gewählt wird.
+ist deshalb nach Adern gebaut, nicht als eine lange Reihe Sexfragen:
+
+| Gruppe | worum es geht |
+|---|---|
+| Direkt / Härter | Sex und Kink, beim Namen genannt |
+| Ekel | Körper, Gerüche, Bad und Bett – ganz ohne Sex |
+| Rausch | nicht nur Alkohol |
+| Straftaten / Gewalt | wer würde, wenn niemand hinsieht |
+| Unter Freunden | Verrat, Lästern, Schadenfreude – die härteste Ader von allen |
+| Familie, Geld, Selbstbetrug | Erbstreit, Fassade, die Lüge über sich selbst |
+| Bildschirm | was auf dem Handy passiert |
+| Dieselben Typen, nur nachts | die Stillen, die Lauten, die Gleichgültigen, die vor der Kamera |
+| Wenn es hart auf hart kommt | Film, Apokalypse, Sekte |
+
+So bekommt jeder Typ am Tisch etwas ab, und es werden nicht immer dieselben
+zwei gewählt.
+
+Die Pointe ist dabei immer **die Tat, nicht das Zurückzucken**. „Würde am
+ehesten etwas vorschlagen und es sofort bereuen" fragt im Kern nur, wer
+kneift – daran ist nichts komisch. Solche Konstruktionen gehören nicht in
+diesen Stapel.
 
 `FRECH` ist aus demselben Grund von 50 auf 115 gewachsen und deckt die
 jugendfreie Hälfte derselben Typen ab.

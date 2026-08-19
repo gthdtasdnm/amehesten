@@ -58,6 +58,45 @@ for (const [name, liste] of STAPEL) {
     if (f[0] !== f[0].toLowerCase()) throw new Error(`${name}: groß geschrieben: „${f}"`);
   }
 }
+// --- Die wichtigste Regel: Vermutung, nicht Beichte -------------------------
+//
+// „Wer von euch WUERDE am ehesten …" – nicht „wer HAT schon mal …". Der
+// Unterschied entscheidet, was fuer ein Spiel das hier ist:
+//
+//   Bei „wer hat schon mal" kennt nur eine Person die Antwort. Die anderen
+//   raten nicht, sie wissen es schlicht nicht. Die Aufloesung ist dann ein
+//   Outing oder eine Luege, und der Getroffene muss sich erklaeren. Das ist
+//   ein Verhoer – und es ist ausserdem das Spiel nebenan, „Ich hab noch nie".
+//
+//   Bei „wer wuerde am ehesten" gibt es gar keine Wahrheit, nur das Urteil
+//   des Tisches. Niemand kann falsch liegen, niemand muss etwas zugeben, und
+//   der Gespraechsanlass ist nicht „stimmt das?", sondern „warum denkt ihr
+//   das ueber mich?".
+//
+// Und genau das macht den 18+-Stapel erst spielbar: als Vermutung geht eine
+// Frage durch, die als Geständnis den Abend beenden wuerde.
+//
+// Erlaubt sind zwei Formen:
+//   1. die Vermutung  – „wuerde am ehesten …", „waere …", „haette …"
+//   2. die Zuschreibung im Jetzt – „hat den groessten …", „sagt am
+//      haeufigsten …". Auch das schaetzt der Tisch, es blickt nur nicht
+//      zurueck.
+// Verboten ist die Vergangenheit.
+//
+// Mechanisch faengt das hier nur „schon mal" ab – das ist die Form, in der es
+// sich einschleicht, und sie ist eindeutig. Den Rest traegt der Kopf beim
+// Schreiben. Gleiche Bauart wie die Wortliste in Flaschendrehen: eine harte
+// Grenze, die nicht vom guten Willen des naechsten Durchgangs abhaengt.
+for (const [name, liste] of STAPEL) {
+  const beichte = liste.filter((f) => /schon mal/i.test(f));
+  if (beichte.length) {
+    throw new Error(
+      `${name}: ${beichte.length} Frage(n) in der Beichtform statt als Vermutung.\n` +
+        beichte.map((f) => `  „${f}"\n  → besser: „würde am ehesten …?"`).join("\n"),
+    );
+  }
+}
+
 // Auch ueber die Stapel hinweg: „gemischt" wirft zwei davon zusammen, eine
 // Dublette kaeme sonst in derselben Partie zweimal.
 const alleFragen = STAPEL.flatMap(([, l]) => l);
@@ -80,9 +119,14 @@ if (stapelFuer("ab18").length !== SCHMUTZIG.length) {
   throw new Error("Der Modus ab18 zieht nicht genau den 18+-Stapel");
 }
 if (!MODI.includes("ab18")) throw new Error("ab18 fehlt in MODI");
+const vermutung = alleFragen.filter((f) => /^(würde|wäre|hätte)|(würde|wäre|hätte) am ehesten/.test(f));
 console.log(
   `ok  Fragen: ${HARMLOS.length} harmlos, ${FRECH.length} frech, ` +
     `${SCHMUTZIG.length} ab 18 – keine Doppelten, 18+ nur im eigenen Modus`,
+);
+console.log(
+  `ok  keine einzige in der Beichtform; ${vermutung.length} von ${alleFragen.length} ` +
+    "sind ausdrückliche Vermutungen, der Rest Zuschreibungen im Jetzt",
 );
 
 // --- Jetzt der Server -------------------------------------------------------
